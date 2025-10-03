@@ -1,108 +1,184 @@
-<script>
-  const form = document.getElementById('reviewForm');
-  const messageDiv = document.getElementById('message');
-  const reviewsList = document.getElementById('reviewsList');
-  const averageRatingDiv = document.getElementById('averageRating');
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Отзывы клиентов</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 0 15px;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      margin-bottom: 30px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 6px;
+      background: #f9f9f9;
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .review {
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+    }
+    .review:last-child {
+      border-bottom: none;
+    }
+    .review strong {
+      font-size: 16px;
+    }
+    .rating {
+      color: #ffa500;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    #averageRating {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
 
-  // Функция для экранирования HTML в тексте
-  function escapeHTML(str) {
-    return str.replace(/[&<>"']/g, (m) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-    }[m]));
-  }
+  <h1>Отзывы клиентов</h1>
 
-  // Загрузка и отображение отзывов
-  async function loadReviews() {
-    try {
-      const res = await fetch('/reviews');
-      if (!res.ok) throw new Error('Ошибка загрузки отзывов');
-      const data = await res.json();
-      reviewsList.innerHTML = '';
-      if (data.length === 0) {
-        reviewsList.innerHTML = '<li>Пока нет отзывов.</li>';
-        return;
+  <div id="averageRating">Средняя оценка: 0</div>
+
+  <form id="reviewForm">
+    <label for="name">Имя:</label>
+    <input type="text" id="name" required />
+
+    <label for="text">Отзыв:</label>
+    <textarea id="text" rows="4" required></textarea>
+
+    <label for="rating">Оценка (1–5):</label>
+    <select id="rating" required>
+      <option value="">-- Выберите --</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+
+    <br /><br />
+    <button type="submit">Добавить отзыв</button>
+  </form>
+
+  <div id="reviewsContainer"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('reviewForm');
+      const reviewsContainer = document.getElementById('reviewsContainer');
+      const averageRatingElem = document.getElementById('averageRating');
+
+      async function loadReviews() {
+        const res = await fetch('/reviews');
+        const reviews = await res.json();
+        renderReviews(reviews);
+        updateAverageRating(reviews);
       }
-      data.forEach(({ rating, text }) => {
-        const li = document.createElement('li');
-        li.className = 'review-item';
-        li.innerHTML = `<div class="review-rating">Оценка: ${rating.toFixed(1)}</div><div class="review-text">${escapeHTML(text)}</div>`;
-        reviewsList.appendChild(li);
-      });
-    } catch (e) {
-      reviewsList.innerHTML = '<li>Не удалось загрузить отзывы.</li>';
-      console.error(e);
-    }
-  }
 
-  // Загрузка и отображение средней оценки
-  async function loadAverageRating() {
-    try {
-      const res = await fetch('/average-rating');
-      if (!res.ok) throw new Error('Ошибка при загрузке средней оценки');
-      const data = await res.json();
-      const avg = data.average.toFixed(2);
-      averageRatingDiv.textContent = `Средняя оценка: ${avg} / 5.0`;
-    } catch {
-      averageRatingDiv.textContent = 'Не удалось загрузить среднюю оценку';
-    }
-  }
-
-  // Отправка отзыва
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    messageDiv.textContent = '';
-    messageDiv.className = '';
-    const rating = parseFloat(form.rating.value);
-    const text = form.text.value.trim();
-
-    // Простая валидация
-    if (isNaN(rating) || rating < 0 || rating > 5) {
-      messageDiv.textContent = 'Оценка должна быть от 0.0 до 5.0';
-      messageDiv.className = 'error';
-      return;
-    }
-    if (text.length === 0) {
-      messageDiv.textContent = 'Введите текст отзыва';
-      messageDiv.className = 'error';
-      return;
-    }
-
-    form.querySelector('button').disabled = true;
-
-    try {
-      const res = await fetch('/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating, text })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        messageDiv.textContent = data.error || 'Ошибка сервера';
-        messageDiv.className = 'error';
-      } else {
-        messageDiv.textContent = 'Спасибо за отзыв!';
-        messageDiv.className = 'success';
-        form.reset();
-        form.style.display = 'none'; // Блокируем повторную отправку
-        // Обновляем отзывы и среднюю оценку
-        loadReviews();
-        loadAverageRating();
+      function renderReviews(reviews) {
+        reviewsContainer.innerHTML = '';
+        reviews.forEach(review => {
+          const div = document.createElement('div');
+          div.className = 'review';
+          div.innerHTML = `
+            <strong>${escapeHtml(review.name)}</strong>
+            <span class="rating">Оценка: ${review.rating}</span>
+            <p>${escapeHtml(review.text)}</p>
+          `;
+          reviewsContainer.appendChild(div);
+        });
       }
-    } catch (err) {
-      messageDiv.textContent = 'Ошибка сети, попробуйте позже';
-      messageDiv.className = 'error';
-    } finally {
-      form.querySelector('button').disabled = false;
-    }
-  });
 
-  // При загрузке страницы
-  loadReviews();
-  loadAverageRating();
-</script>
+      function updateAverageRating(reviews) {
+        if (reviews.length === 0) {
+          averageRatingElem.textContent = 'Средняя оценка: 0';
+          return;
+        }
+        const total = reviews.reduce((sum, r) => sum + Number(r.rating), 0);
+        const avg = (total / reviews.length).toFixed(2);
+        averageRatingElem.textContent = `Средняя оценка: ${avg}`;
+      }
+
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+
+        const name = form.name.value.trim();
+        const text = form.text.value.trim();
+        const rating = form.rating.value;
+
+        if (!name || !text || !rating) {
+          alert('Пожалуйста, заполните все поля.');
+          return;
+        }
+
+        const res = await fetch('/reviews', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, text, rating })
+        });
+
+        if (res.ok) {
+          form.reset();
+          loadReviews();
+        } else {
+          const error = await res.json();
+          alert(error.error || 'Ошибка при добавлении отзыва');
+        }
+      });
+
+      // Простая функция экранирования для безопасности
+      function escapeHtml(text) {
+        const map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+      }
+
+      loadReviews();
+    });
+  </script>
+
+</body>
+</html>
