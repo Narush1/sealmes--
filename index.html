@@ -99,19 +99,13 @@
   <div id="reviewsContainer"></div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
       const form = document.getElementById('reviewForm');
       const reviewsContainer = document.getElementById('reviewsContainer');
       const averageRatingElem = document.getElementById('averageRating');
+      const reviews = [];
 
-      async function loadReviews() {
-        const res = await fetch('/reviews');
-        const reviews = await res.json();
-        renderReviews(reviews);
-        updateAverageRating(reviews);
-      }
-
-      function renderReviews(reviews) {
+      function renderReviews() {
         reviewsContainer.innerHTML = '';
         reviews.forEach(review => {
           const div = document.createElement('div');
@@ -125,7 +119,7 @@
         });
       }
 
-      function updateAverageRating(reviews) {
+      function updateAverageRating() {
         if (reviews.length === 0) {
           averageRatingElem.textContent = 'Средняя оценка: 0';
           return;
@@ -135,7 +129,7 @@
         averageRatingElem.textContent = `Средняя оценка: ${avg}`;
       }
 
-      form.addEventListener('submit', async e => {
+      form.addEventListener('submit', function(e) {
         e.preventDefault();
 
         const name = form.name.value.trim();
@@ -147,21 +141,12 @@
           return;
         }
 
-        const res = await fetch('/reviews', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ name, text, rating })
-        });
+        reviews.push({ name, text, rating });
 
-        if (res.ok) {
-          form.reset();
-          loadReviews();
-        } else {
-          const error = await res.json();
-          alert(error.error || 'Ошибка при добавлении отзыва');
-        }
+        renderReviews();
+        updateAverageRating();
+
+        form.reset();
       });
 
       // Простая функция экранирования для безопасности
@@ -173,10 +158,8 @@
           '"': '&quot;',
           "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, m => map[m]);
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
       }
-
-      loadReviews();
     });
   </script>
 
