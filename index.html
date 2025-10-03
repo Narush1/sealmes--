@@ -1,124 +1,8 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Отзывы</title>
-<style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-    max-width: 600px;
-    margin: 30px auto;
-    padding: 0 15px;
-    background: #f9f9f9;
-    color: #333;
-  }
-  h1 {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  form {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
-  }
-  label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-  }
-  input[type="number"], textarea {
-    width: 100%;
-    padding: 8px 10px;
-    margin-bottom: 15px;
-    border: 1.5px solid #ddd;
-    border-radius: 6px;
-    font-size: 16px;
-    resize: vertical;
-  }
-  input[type="number"] {
-    max-width: 100px;
-  }
-  button {
-    background: #4caf50;
-    color: white;
-    border: none;
-    padding: 12px 25px;
-    font-size: 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.3s ease;
-  }
-  button:disabled {
-    background: #aaa;
-    cursor: not-allowed;
-  }
-  button:hover:not(:disabled) {
-    background: #45a049;
-  }
-  .error {
-    color: #d93025;
-    margin-bottom: 10px;
-  }
-  .success {
-    color: #188038;
-    margin-bottom: 10px;
-  }
-  .reviews-list {
-    list-style: none;
-    padding-left: 0;
-  }
-  .review-item {
-    background: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    box-shadow: 0 0 6px rgba(0,0,0,0.05);
-  }
-  .review-rating {
-    font-weight: 700;
-    color: #4caf50;
-    margin-bottom: 8px;
-  }
-  .review-text {
-    white-space: pre-wrap;
-    line-height: 1.4;
-  }
-</style>
-</head>
-<body>
-
-<h1>Отзывы</h1>
-
-<form id="reviewForm">
-  <div id="message"></div>
-  
-  <label for="rating">Оценка (0.0 - 5.0):</label>
-  <input
-    type="number"
-    id="rating"
-    name="rating"
-    min="0"
-    max="5"
-    step="0.1"
-    required
-  />
-  
-  <label for="text">Текст отзыва:</label>
-  <textarea id="text" name="text" rows="5" maxlength="1000" required></textarea>
-  
-  <button type="submit">Отправить отзыв</button>
-</form>
-
-<ul class="reviews-list" id="reviewsList"></ul>
-
 <script>
   const form = document.getElementById('reviewForm');
   const messageDiv = document.getElementById('message');
   const reviewsList = document.getElementById('reviewsList');
+  const averageRatingDiv = document.getElementById('averageRating');
 
   // Функция для экранирования HTML в тексте
   function escapeHTML(str) {
@@ -151,6 +35,19 @@
     } catch (e) {
       reviewsList.innerHTML = '<li>Не удалось загрузить отзывы.</li>';
       console.error(e);
+    }
+  }
+
+  // Загрузка и отображение средней оценки
+  async function loadAverageRating() {
+    try {
+      const res = await fetch('/average-rating');
+      if (!res.ok) throw new Error('Ошибка при загрузке средней оценки');
+      const data = await res.json();
+      const avg = data.average.toFixed(2);
+      averageRatingDiv.textContent = `Средняя оценка: ${avg} / 5.0`;
+    } catch {
+      averageRatingDiv.textContent = 'Не удалось загрузить среднюю оценку';
     }
   }
 
@@ -192,8 +89,10 @@
         messageDiv.textContent = 'Спасибо за отзыв!';
         messageDiv.className = 'success';
         form.reset();
-        // После удачного отзыва блокируем форму — потому что сервер блокирует повторные по IP
-        form.style.display = 'none';
+        form.style.display = 'none'; // Блокируем повторную отправку
+        // Обновляем отзывы и среднюю оценку
+        loadReviews();
+        loadAverageRating();
       }
     } catch (err) {
       messageDiv.textContent = 'Ошибка сети, попробуйте позже';
@@ -203,9 +102,7 @@
     }
   });
 
-  // Загружаем отзывы при загрузке страницы
+  // При загрузке страницы
   loadReviews();
+  loadAverageRating();
 </script>
-
-</body>
-</html>
